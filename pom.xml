@@ -1,0 +1,17 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>SDDL-parser</groupId>
+  <artifactId>SDDL-parser</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0-SNAPSHOT</version>
+  <name>SDDL-parser</name>
+  <url>http://maven.apache.org</url>
+  <dependencies>
+      <!-- https://mvnrepository.com/artifact/org.json/json -->
+      <dependency>
+        <groupId>org.json</groupId>
+        <artifactId>json</artifactId>
+        <version>20201115</version>
+      </dependency>
+  </dependencies>
+</project>
