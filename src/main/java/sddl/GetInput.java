@@ -13,7 +13,7 @@ public class GetInput
         System.out.println("Enter your sddl format :");
         Scanner sc = new Scanner(System.in);
         sddl = sc.next();
-      
+        /*ssdl="O:AOG:DAD:(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;SY)(A;;CCLCSWLORC;;;BO)S:(AU;FA;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;WD)"; */
         Sddl_con sddl_con = new Sddl_con();
         sddl_con.parser(sddl);
 
