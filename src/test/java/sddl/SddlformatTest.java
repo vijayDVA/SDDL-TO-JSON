@@ -68,6 +68,7 @@ public class SddlformatTest
 			assertFalse(sddl.control.contains(Sddlconstants.SdCtr.SE_SACL_PRESENT));
 			//there is no other non-constant and non-well-known sids
 			assertEquals(0, sddl.sidlist.size());
+System.out.printf("There are total %d error(s) in the string(s). See the above for details.\n", sddl.errs);
 		} catch (Exception e) 
         {
 			System.out.println(e.getMessage());
