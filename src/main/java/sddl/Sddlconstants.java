@@ -170,5 +170,203 @@ public class Sddlconstants {
 	static {
 		for (AceFlag flag: AceFlag.values()) aceFlagMap.put(flag.value(), flag);
 	}
+	enum SdCtr {
+		SE_DACL_AUTO_INHERIT_REQ,
+		SE_DACL_AUTO_INHERITED,
+		SE_DACL_DEFAULTED,
+		SE_DACL_PRESENT,
+		SE_DACL_PROTECTED,
+		SE_GROUP_DEFAULTED,
+		SE_OWNER_DEFAULTED,
+		SE_RM_CONTROL_VALID,
+		SE_SACL_AUTO_INHERIT_REQ,
+		SE_SACL_AUTO_INHERITED,
+		SE_SACL_DEFAULTED,
+		SE_SACL_PRESENT,
+		SE_SACL_PROTECTED,
+		SE_SELF_RELATIVE,
+	}
+	enum WellKnownSid {
+		/* Universal well-known SIDs.
+		 * see below.
+			Null SID	S-1-0-0
+			World	S-1-1-0
+			Local	S-1-2-0
+			Creator Owner ID	S-1-3-0
+			Creator Group ID	S-1-3-1
+		*/
+		
+		//RID values are used with universal well-known SIDs.
+		//The Identifier authority column shows the prefix of the identifier authority with which you can 
+		//combine the RID to create a universal well-known SID.
+		
+		SECURITY_NULL_SID						("S-1-0-0"), 
+		SECURITY_WORLD_SID						("S-1-1-0"), 
+		SECURITY_LOCAL_SID						("S-1-2-0"), 
+		SECURITY_LOCAL_LOGON_SID				("S-1-2-1"), 
+		SECURITY_CREATOR_OWNER_SID				("S-1-3-0"), 
+		SECURITY_CREATOR_GROUP_SID				("S-1-3-1"), 
+		
+		//The SECURITY_NT_AUTHORITY (S-1-5) predefined identifier authority produces SIDs that are not 
+		//universal but are meaningful only on Windows installations. You can use the following SID values 
+		//with SECURITY_NT_AUTHORITY to create well-known SIDs.
+		SECURITY_DIALUP_SID						("S-1-5-1"),
+		SECURITY_NETWORK_SID					("S-1-5-2"), 
+		SECURITY_BATCH_SID						("S-1-5-3"), 
+		SECURITY_LOGON_IDS_SID					("S-1-5-5-X-Y"), 
+		SECURITY_SERVICE_SID					("S-1-5-6"), 
+		SECURITY_ANONYMOUS_LOGON_SID			("S-1-5-7"), 
+		SECURITY_PROXY_SID						("S-1-5-8"), 
+		SECURITY_ENTERPRISE_CONTROLLERS_SID		("S-1-5-9"), 
+		SECURITY_PRINCIPAL_SELF_SID				("S-1-5-10"), 
+		SECURITY_AUTHENTICATED_USER_SID			("S-1-5-11"), 
+		SECURITY_RESTRICTED_CODE_SID			("S-1-5-12"), 
+		SECURITY_TERMINAL_SERVER_SID			("S-1-5-13"), 
+		SECURITY_LOCAL_SYSTEM_SID				("S-1-5-18"), 
+		SECURITY_NT_NON_UNIQUE					("S-1-5-21"), 
+		SECURITY_BUILTIN_DOMAIN_SID				("S-1-5-32");
+		
+		private WellKnownSid(String value) { this.value = value; }
+		private final String value;
+		public String value() { return this.value; }
+	}
+	
+	//A map of well-known sids to their names
+	//We cannot use an EnumMap here because Java does not allow '-' in identifier, so we could not make an 
+	//enum of {S-1-3-1 etc.} and use it as key of EnumMap
+	static final Map<String, WellKnownSid> wellKnownSidMap = new HashMap<String, WellKnownSid>();
+	static {
+		for (WellKnownSid sid: WellKnownSid.values()) wellKnownSidMap.put(sid.value(), sid);
+	}
+
+	// The following are for other well-known SIDs not found in the above WellKnownSidMap
+
+	//predefined identifier authority constants for universal well-known SIDs;
+	//the last value is used with Windows well-known SIDs.
+	enum WellKnownSidAuth {
+		SECURITY_NULL_SID_AUTHORITY			("S-1-0"),
+		SECURITY_WORLD_SID_AUTHORIT			("S-1-1"),
+		SECURITY_LOCAL_SID_AUTHORITY		("S-1-2"),
+		SECURITY_CREATOR_SID_AUTHORITY		("S-1-3"),
+		SECURITY_NT_AUTHORITY				("S-1-5");
+		
+		private WellKnownSidAuth(String value) { this.value = value; }
+		private final String value;
+		String value() { return value; }
+	};
+	
+	//RIDs are used to specify mandatory integrity level.
+	//TODO: it seems that SIDs starting with S- have 10 ordinal, whereas others have 16 ordinal
+	enum IntegrityLevelRid {
+		SECURITY_MANDATORY_UNTRUSTED_RID			("00000000"),
+		SECURITY_MANDATORY_LOW_INTEGRITY_RID		("00001000"),
+		SECURITY_MANDATORY_MEDIUM_INTEGRITY_RID		("00002000"),
+		SECURITY_MANDATORY_SYSTEM_INTEGRITY_RID		("00004000"),
+		SECURITY_MANDATORY_PROTECTED_PROCESS_RID	("00005000");
+		
+		private IntegrityLevelRid(String value) { this.value = value; }
+		private final String value;
+		String value() { return value; }
+	}
+	
+	// Well-known SIDs type on Windows
+	enum WinWellKnownRid {
+		WinNullRid(0), 
+		WinWorldRid(1), 
+		WinLocalRid(2), 
+		WinCreatorOwnerRid(3), 
+		WinCreatorGroupRid(4), 
+		WinCreatorOwnerServerRid(5), 
+		WinCreatorGroupServerRid(6), 
+		WinNtAuthorityRid(7), 
+		WinDialupRid(8), 
+		WinNetworkRid(9), 
+		WinBatchRid(10), 
+		WinInteractiveRid(11), 
+		WinServiceRid(12), 
+		WinAnonymousRid(13), 
+		WinProxyRid(14), 
+		WinEnterpriseControllersRid(15), 
+		WinSelfRid(16), 
+		WinAuthenticatedUserRid(17), 
+		WinRestrictedCodeRid(18), 
+		WinTerminalServerRid(19), 
+		WinRemoteLogonIdRid(20), 
+		WinLogonIdsRid(21), 
+		WinLocalSystemRid(22), 
+		WinLocalServiceRid(23), 
+		WinNetworkServiceRid(24), 
+		WinBuiltinDomainRid(25), 
+		WinBuiltinAdministratorsRid(26), 
+		WinBuiltinUsersRid(27), 
+		WinBuiltinGuestsRid(28), 
+		WinBuiltinPowerUsersRid(29), 
+		WinBuiltinAccountOperatorsRid(30), 
+		WinBuiltinSystemOperatorsRid(31), 
+		WinBuiltinPrintOperatorsRid(32), 
+		WinBuiltinBackupOperatorsRid(33), 
+		WinBuiltinReplicatorRid(34), 
+		WinBuiltinPreWindows2000CompatibleAccessRid(35), 
+		WinBuiltinRemoteDesktopUsersRid(36), 
+		WinBuiltinNetworkConfigurationOperatorsRid(37), 
+		WinAccountAdministratorRid(38), 
+		WinAccountGuestRid(39), 
+		WinAccountKrbtgtRid(40), 
+		WinAccountDomainAdminsRid(41), 
+		WinAccountDomainUsersRid(42), 
+		WinAccountDomainGuestsRid(43), 
+		WinAccountComputersRid(44), 
+		WinAccountControllersRid(45), 
+		WinAccountCertAdminsRid(46), 
+		WinAccountSchemaAdminsRid(47), 
+		WinAccountEnterpriseAdminsRid(48), 
+		WinAccountPolicyAdminsRid(49), 
+		WinAccountRasAndIasServersRid(50), 
+		WinNTLMAuthenticationRid(51), 
+		WinDigestAuthenticationRid(52), 
+		WinSChannelAuthenticationRid(53), 
+		WinThisOrganizationRid(54), 
+		WinOtherOrganizationRid(55), 
+		WinBuiltinIncomingForestTrustBuildersRid(56), 
+		WinBuiltinPerfMonitoringUsersRid(57), 
+		WinBuiltinPerfLoggingUsersRid(58), 
+		WinBuiltinAuthorizationAccessRid(59), 
+		WinBuiltinTerminalServerLicenseServersRid(60), 
+		WinBuiltinDCOMUsersRid(61), 
+		WinBuiltinIUsersRid(62), 
+		WinIUserRid(63), 
+		WinBuiltinCryptoOperatorsRid(64), 
+		WinUntrustedLabelRid(65), 
+		WinLowLabelRid(66), 
+		WinMediumLabelRid(67), 
+		WinHighLabelRid(68), 
+		WinSystemLabelRid(69), 
+		WinWriteRestrictedCodeRid(70), 
+		WinCreatorOwnerRightsRid(71), 
+		WinCacheablePrincipalsGroupRid(72), 
+		WinNonCacheablePrincipalsGroupRid(73), 
+		WinEnterpriseReadonlyControllersRid(74), 
+		WinAccountReadonlyControllersRid(75), 
+		WinBuiltinEventLogReadersGroup(76), 
+		WinNewEnterpriseReadonlyControllersRid(77), 
+		WinBuiltinCertSvcDComAccessGroup(78);
+
+		private WinWellKnownRid(int value) { this.value = Integer.toString(value); }
+		private final String value;
+		String value() { return value; }
+	}
+
+	//A map of other well-known SIDs not found in the above WellKnownSidMap
+	//We cannot use an EnumMap here because Java does not allow '-' in identifier, so we could not make an 
+	//enum of {S-1-3-1 etc.} and use it as key of EnumMap
+	static final Map<String, Enum<?>> wellKnownSidMap2 = new HashMap<String, Enum<?>>();
+	static {
+		for (WellKnownSidAuth sidAuth: WellKnownSidAuth.values()) {
+			for (WinWellKnownRid rid: WinWellKnownRid.values())
+				wellKnownSidMap2.put(sidAuth.value() + "-" + rid.value(), rid);
+			for (IntegrityLevelRid rid: IntegrityLevelRid.values())
+				wellKnownSidMap2.put(sidAuth.value() + "-" + rid.value(), rid);
+		}
+	}
 
 }

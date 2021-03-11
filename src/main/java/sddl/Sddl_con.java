@@ -1,26 +1,25 @@
 package sddl;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Arrays;
-import java.util.Map;
-
 
 import org.json.JSONObject;
 import java.lang.reflect.Field;
-import java.util.LinkedHashMap;
-
-
+import java.util.*;
 
 
 public class Sddl_con extends Sddlconstants
 {
-    static String name,group;
+	static int errs;
+
+    
+	Sid owner;
+	Sid group;
     SddlFlag[] daclFlags;
 	Ace[] daces;
 	SddlFlag[] saclFlags;
 	Ace[] saces;
-	static String dacl="",sacl="";
+	String dacl="",sacl="";
 
+	EnumSet<SdCtr>	control;
+	List<Sid>	sidlist = Collections.synchronizedList(new LinkedList<Sid>());
 	
 	JSONObject DACL_ELEMENTS =new JSONObject();
 	JSONObject DACL_ELEMENT =new JSONObject();
@@ -29,10 +28,56 @@ public class Sddl_con extends Sddlconstants
 	JSONObject json=new JSONObject();
        
 
-    void parser(String sddlformat)
+	class Sid {
+		String sidstr;								// SID string or SID constant string
+		String name;								// SID name
+		String descr;								// human-readable description
+		private boolean isConstant;
+		private String[] sub;						// S-R-I-S-S...
+
+		Sid(String sidstr) {
+			if (sidstr != null && !sidstr.isEmpty()) {
+				try {
+					sub = sidstr.split("-");
+					if (sub.length > 1) {							// it is a standard SID string
+						sidlist.add(this);
+						this.isConstant = false;
+					} else {										// it is a SID constant string
+						if (sidAliasMap.containsKey(sidstr)) {
+							this.name = sidAliasMap.get(sidstr).toString();
+							this.descr = sidAliasMap.get(sidstr).descr();
+							this.isConstant = true;
+						} else throw new InvalidTokenInSddl(sidstr, 0, sidstr);
+					}
+				} catch (Exception e) {
+					System.out.println(e.getMessage());
+				}
+			}
+
+			this.sidstr = sidstr;
+		}
+
+		boolean isConstant() { return isConstant; }
+		@Override
+		public String toString() { return ( descr != null ? descr : (name != null ? name : sidstr)); }
+
+
+	}
+    public void parser(String sddlformat) throws NullACLsInSddl, UnSupportedTagInSddl, InvalidTokenInSddl, IllegalFormatSddl
     {        
              
-        
+        if (sddlformat == null || sddlformat.isEmpty()) {
+			throw new NullACLsInSddl();
+		}
+
+		if (sddlformat.charAt(sddlformat.length()-1) == '\0') {
+			sddlformat = sddlformat.substring(0, sddlformat.length()-1);
+		}
+
+		sddlformat = sddlformat.replaceAll("[ \t\n\b\f\r]", "");
+
+		this.control = EnumSet.of(SdCtr.SE_SELF_RELATIVE);
+
         String[] tokens = sddlformat.split(":");
         
         for (int i =0; i < tokens.length-1; i++) 
@@ -43,14 +88,15 @@ public class Sddl_con extends Sddlconstants
             switch (tag)
             {
                 case 'O':
-                    name = sidAliasMap.get(token).descr();
+					this.owner = new Sid(token);
                     //System.out.println(name);
                     break;
                 case 'G':
-                    group = sidAliasMap.get(token).descr();
+					this.group = new Sid(token);
                     //System.out.println(group);
                     break;
                 case 'D':
+					this.control.add(SdCtr.SE_DACL_PRESENT);
                     toACL(token, 'D');
                     int j=0;
                     for(Sddl_con.Ace ace: daces){
@@ -64,6 +110,7 @@ public class Sddl_con extends Sddlconstants
 
                     break;
                 case 'S':
+					this.control.add(SdCtr.SE_SACL_PRESENT);
                     toACL(token,'S');
                     int k = 0;
 					if(saces != null){
@@ -76,9 +123,30 @@ public class Sddl_con extends Sddlconstants
 					}
                    // System.out.println(sacl);
                     break;
-                default:                    
+				default:
+					throw new UnSupportedTagInSddl(tag, sddlformat);                    
             }
-        }        
+        }
+		for (Iterator<Sid> siditer = sidlist.iterator(); siditer.hasNext();) {
+			Sid sid = siditer.next();
+
+			if (wellKnownSidMap.containsKey(sid.sidstr)) {
+				sid.name = wellKnownSidMap.get(sid.sidstr).toString();
+				siditer.remove();
+			}
+			else if (wellKnownSidMap2.containsKey(sid.sidstr)) {
+				sid.name = wellKnownSidMap2.get(sid.sidstr).toString();
+				siditer.remove();
+			}
+			else if (sid.sidstr.startsWith("S-1-5-5-")) {	// handle the case S-1-5-5-X-Y
+				sid.name = "SECURITY_LOGON_IDS_SID";
+				siditer.remove();
+			}
+		}
+
+		// the rest SIDs are resolved in Class SddlFormat by calling RPC routine to the server
+
+		// keep record of the normalized sddl string       
 		alltojson();
     }
 
@@ -92,7 +160,7 @@ public class Sddl_con extends Sddlconstants
 		  } catch (Exception e) {
 			System.out.println(e.getMessage());
 		  }
-		json.put("OWNER", name);
+		json.put("OWNER", owner);
         json.put("GROUP", group);
         json.put("DACL",DACL_ELEMENTS);
         json.put("SACL",SACL_ELEMENTS);
@@ -135,12 +203,12 @@ public class Sddl_con extends Sddlconstants
 	
     public class Ace {
         String aceStr;
-		AceType[] aceType;								//allow/deny/audit
-		AceFlag[] aceFlags;								//inheritance and audit settings
-		AceRight[] acePermissions;						//list of incremental permissions
-		String gUID="";									//Object type
-		String iGUID="";								//Inherited object type
-		String sID="";									//Trustee
+		AceType[] aceType;					
+		AceFlag[] aceFlags;								
+		AceRight[] acePermissions;						
+		Sid gUID;										
+		Sid iGUID;										
+		Sid sID;	
 
 		Ace(String ace) 
         {
@@ -155,16 +223,10 @@ public class Sddl_con extends Sddlconstants
 						aceType = tokenParse(fields[0], aceTypeMap, 2, new AceType[0]);
 						aceFlags = tokenParse(fields[1], aceFlagMap, 2, new AceFlag[0]);
 						acePermissions = tokenParse(fields[2], aceRightMap, 2, new AceRight[0]);
-						if(fields[3].length()!=0){
-						gUID = sidAliasMap.get(fields[3]).descr();}
-					
-						if(fields[4].length()!=0){
-						iGUID = sidAliasMap.get(fields[4]).descr();}
-
-						if(fields[5].length()!=0){
-						sID = sidAliasMap.get(fields[5]).descr();
-						}
-					} 
+						gUID = new Sid(fields[3]);
+						iGUID = new Sid(fields[4]);
+						sID = new Sid(fields[5]);
+					} else throw new IllegalFormatSddl(ace);
 				} catch (Exception e) 
                 {
 					System.out.println(e.getMessage());
@@ -221,7 +283,7 @@ public class Sddl_con extends Sddlconstants
 		
 	}
     private static <T extends Enum<T>> T[] tokenParse(String token, Map<String, T> tokenMap,
-	int tokenSize, T[] ta)  {
+	int tokenSize, T[] ta) throws InvalidTokenInSddl {
 		List<T> list = new ArrayList<T>();
 
 		int	index = 0;
@@ -243,7 +305,9 @@ public class Sddl_con extends Sddlconstants
 				}
 			}	
 			
-			 if (tok.length() < tSize) {	
+			if (tSize == 0)	{
+				throw new InvalidTokenInSddl(t, index, token);
+			} else if (tok.length() < tSize) {	
 				tSize--;
 				continue;
 			}
@@ -252,6 +316,48 @@ public class Sddl_con extends Sddlconstants
 		} 
 
 		return (list.toArray(ta));
+	}
+
+
+	static class NullACLsInSddl extends Exception {
+		private static final long serialVersionUID = 1L;
+
+		NullACLsInSddl() {
+			super("The security descriptor string format does not support NULL ACLs.");
+			errs++;
+		}
+	}
+
+	static class UnSupportedTagInSddl extends Exception {
+		private static final long serialVersionUID = 1L;
+
+		UnSupportedTagInSddl(char tag, String sddlstr) {
+			super("Unsupported tag " + tag
+					+ " in the security descriptor string "
+					+ sddlstr + ".");
+			errs++;
+		}
+	}
+
+	static class InvalidTokenInSddl extends Exception {
+		private static final long serialVersionUID = 1L;
+
+		InvalidTokenInSddl(String tok, int index, String token) {
+			super("Invalid token " + tok
+					+ " at index " + index
+					+ " in the token string "
+					+ token + ".");
+			errs++;
+		}
+	}
+
+	static class IllegalFormatSddl extends Exception {
+		private static final long serialVersionUID = 1L;
+
+		IllegalFormatSddl(String tok) {
+			super("Illegal Format SDDL: " + tok);
+			errs++;
+		}
 	}
 
 }
